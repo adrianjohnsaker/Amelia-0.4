@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="amelia_cyan">#00FFC8</color>
+    <color name="consciousness_purple">#FF00E1</color>
+    <color name="numogram_gold">#FFD700</color>
+    <color name="trinity_blue">#0080FF</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
