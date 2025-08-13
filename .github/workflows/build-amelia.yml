@@ -1,4 +1,4 @@
-name: Build Amelia Resurrection APK
+name: Build Amelia Resurrection APK (With Fallback)
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # ✅ Android SDK install with build-tools, NDK, etc.
+      # ✅ Always install Android SDK + build-tools + NDK
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
@@ -33,14 +33,18 @@ jobs:
           build-tools: 33.0.2
           ndk: 21.4.7075529
 
-      # ✅ Create local.properties so Gradle knows where SDK is
+      # ✅ Tell Gradle where the SDK is
       - name: Create local.properties
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           cat local.properties
 
-      - name: Make Gradle wrapper executable
-        run: chmod +x ./gradlew
+      # ✅ Make Gradle wrapper executable if present
+      - name: Make Gradle wrapper executable (if exists)
+        run: |
+          if [ -f ./gradlew ]; then
+            chmod +x ./gradlew
+          fi
 
       - name: Set up Python for Chaquopy
         uses: actions/setup-python@v5
@@ -59,14 +63,29 @@ jobs:
           }
           EOF
 
-      # 🔍 Optional debug — check available tasks & confirm assembleRelease exists
-      - name: List Gradle tasks
-        run: ./gradlew tasks --all
-
-      - name: Build Release APK
+      # 🔍 Debug: list Gradle tasks if wrapper is present
+      - name: List Gradle tasks (if wrapper exists)
         run: |
-          ./gradlew clean
-          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+          if [ -f ./gradlew ]; then
+            ./gradlew tasks --all || true
+          fi
+
+      # 🚨 Fallback: Install Gradle if wrapper is missing or broken
+      - name: Install Gradle (Fallback)
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: 8.0.1
+
+      # 🛠 Build command with fallback
+      - name: Build Release APK (Wrapper or Fallback)
+        run: |
+          if [ -f ./gradlew ]; then
+            ./gradlew clean
+            ./gradlew :app:assembleRelease --no-daemon --stacktrace
+          else
+            gradle clean
+            gradle :app:assembleRelease --no-daemon --stacktrace
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
