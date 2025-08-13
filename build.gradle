@@ -1,3 +1,5 @@
+// Top-level build.gradle
+
 buildscript {
     ext {
         compose_version = '1.5.4'
@@ -6,12 +8,12 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        maven { url "https://chaquo.com/maven" }
+        maven { url "https://chaquo.com/maven" } // ✅ Chaquopy for plugin resolution
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.4'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath "com.chaquo.python:gradle:14.0.2"
+        classpath "com.android.tools.build:gradle:8.1.4"          // Matches AGP for compileSdk 34
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version" // Matches app/build.gradle
+        classpath "com.chaquo.python:gradle:14.0.2"               // Matches Chaquopy in app/build.gradle
     }
 }
 
@@ -19,6 +21,7 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven { url "https://chaquo.com/maven" } // ✅ Added for module dependencies resolution
     }
 }
 
