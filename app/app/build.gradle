@@ -1,7 +1,8 @@
-plugins {
+    plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'com.chaquo.python'
+    id 'kotlin-kapt'
 }
 
 android {
@@ -16,14 +17,16 @@ android {
         versionName "0.4-resurrection"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        
+
         python {
-            buildPython "/usr/bin/python3"
+            if (file("/usr/bin/python3").exists()) {
+                buildPython "/usr/bin/python3"
+            }
             pip {
                 install "numpy"
             }
         }
-        
+
         ndk {
             abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
@@ -35,20 +38,20 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-    
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    
+
     kotlinOptions {
         jvmTarget = '17'
     }
-    
+
     buildFeatures {
         compose true
     }
-    
+
     composeOptions {
         kotlinCompilerExtensionVersion '1.5.4'
     }
@@ -66,4 +69,5 @@ dependencies {
     implementation "androidx.compose.animation:animation:1.5.4"
     implementation "androidx.room:room-runtime:2.6.0"
     implementation "androidx.room:room-ktx:2.6.0"
+    kapt "androidx.room:room-compiler:2.6.0" // ✅ Added
 }
