@@ -38,14 +38,16 @@ jobs:
       run: |
         mkdir -p app/src/main/assets
         echo '{
-          "mistrel_api_key": "${{ secrets.mistrel_API_KEY }}",
+          "mistrel_api_key": "${{ secrets.MISTREL_API_KEY }}",
           "mistrel_endpoint": "https://api.githubmistrel.com/v1/chat",
           "elevenlabs_api_key": "${{ secrets.ELEVENLABS_API_KEY }}",
           "elevenlabs_voice_id": "${{ secrets.ELEVENLABS_VOICE_ID }}"
         }' > app/src/main/assets/config.json
     
     - name: Build Release APK
-      run: gradle assembleRelease
+      run: |
+        gradle build --no-daemon
+        gradle :app:assembleRelease --no-daemon
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
