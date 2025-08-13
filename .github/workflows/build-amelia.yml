@@ -1,7 +1,6 @@
- name: Build Amelia Resurrection APK
+name: Build Amelia Resurrection APK
 
- on:
- 
+on:
   push:
     branches: [ main ]
   pull_request:
@@ -73,4 +72,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: amelia-resurrection-apk
-          path: app/build/outputs/apk/release/*.apk         
+          path: app/build/outputs/apk/release/*.apk
