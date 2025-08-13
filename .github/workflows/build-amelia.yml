@@ -1,4 +1,4 @@
-name: Build Amelia Resurrection APK (With Fallback)
+name: Build Amelia Resurrection APK (Auto‑Fallback)
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # ✅ Always install Android SDK + build-tools + NDK
+      # ✅ Android SDK install
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
@@ -33,7 +33,7 @@ jobs:
           build-tools: 33.0.2
           ndk: 21.4.7075529
 
-      # ✅ Tell Gradle where the SDK is
+      # ✅ Point Gradle to SDK
       - name: Create local.properties
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
@@ -44,6 +44,21 @@ jobs:
         run: |
           if [ -f ./gradlew ]; then
             chmod +x ./gradlew
+          fi
+
+      # 🚨 Install Gradle for fallback
+      - name: Install Gradle (8.0.1)
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: 8.0.1
+
+      # 🔍 Debug: list tasks — tries wrapper first, then fallback
+      - name: List Gradle tasks
+        run: |
+          if [ -f ./gradlew ] && [ -f gradle/wrapper/gradle-wrapper.jar ]; then
+            ./gradlew tasks --all || true
+          else
+            gradle tasks --all || true
           fi
 
       - name: Set up Python for Chaquopy
@@ -63,32 +78,23 @@ jobs:
           }
           EOF
 
-      # 🔍 Debug: list Gradle tasks if wrapper is present
-      - name: List Gradle tasks (if wrapper exists)
+      # 🛠 Build step with automatic wrapper/fallback detection
+      - name: Build Release APK
         run: |
-          if [ -f ./gradlew ]; then
-            ./gradlew tasks --all || true
-          fi
-
-      # 🚨 Fallback: Install Gradle if wrapper is missing or broken
-      - name: Install Gradle (Fallback)
-        uses: gradle/gradle-build-action@v2
-        with:
-          gradle-version: 8.0.1
-
-      # 🛠 Build command with fallback
-      - name: Build Release APK (Wrapper or Fallback)
-        run: |
-          if [ -f ./gradlew ]; then
+          if [ -f ./gradlew ] && [ -f gradle/wrapper/gradle-wrapper.jar ]; then
+            echo "▶ Using Gradle wrapper"
             ./gradlew clean
             ./gradlew :app:assembleRelease --no-daemon --stacktrace
           else
+            echo "⚠ Gradle wrapper missing or incomplete — using system Gradle"
             gradle clean
             gradle :app:assembleRelease --no-daemon --stacktrace
           fi
 
+      # 📦 Upload artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: amelia-resurrection-apk
           path: app/build/outputs/apk/release/*.apk
+      
