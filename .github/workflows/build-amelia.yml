@@ -32,14 +32,14 @@ jobs:
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v2
       with:
-        gradle-version: 8.0
+        gradle-version: '8.0.2'
     
     - name: Create config.json
       run: |
         mkdir -p app/src/main/assets
         echo '{
-          "copilot_api_key": "${{ secrets.COPILOT_API_KEY }}",
-          "copilot_endpoint": "https://api.githubcopilot.com/v1/chat",
+          "mistrel_api_key": "${{ secrets.mistrel_API_KEY }}",
+          "mistrel_endpoint": "https://api.githubmistrel.com/v1/chat",
           "elevenlabs_api_key": "${{ secrets.ELEVENLABS_API_KEY }}",
           "elevenlabs_voice_id": "${{ secrets.ELEVENLABS_VOICE_ID }}"
         }' > app/src/main/assets/config.json
