@@ -1,4 +1,4 @@
-name: Build Amelia Resurrection APK
+ name: Build Amelia Resurrection APK
 
 on:
   push:
@@ -68,9 +68,9 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Update Gradle wrapper to 8.5
+      - name: Update Gradle wrapper to 8.7
         run: |
-          sed -i 's/distributionUrl=.*gradle-.*-.*\.zip/distributionUrl=https\\:\/\/services.gradle.org\/distributions\/gradle-8.5-all.zip/g' gradle/wrapper/gradle-wrapper.properties
+          sed -i 's/distributionUrl=.*gradle-.*-.*\.zip/distributionUrl=https\\:\/\/services.gradle.org\/distributions\/gradle-8.7-all.zip/g' gradle/wrapper/gradle-wrapper.properties
           echo "Updated gradle-wrapper.properties:"
           cat gradle/wrapper/gradle-wrapper.properties
 
@@ -166,4 +166,4 @@ jobs:
           path: |
             build/reports/
             app/build/reports/
-          if-no-files-found: ignore
+          if-no-files-found: ignore           
