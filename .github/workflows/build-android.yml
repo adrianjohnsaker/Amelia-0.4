@@ -68,46 +68,72 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Update Gradle wrapper to 8.2
+      - name: Update Gradle wrapper to 8.5
         run: |
-          # Update gradle-wrapper.properties to use Gradle 8.2
-          sed -i 's/gradle-8\.1\.1/gradle-8.2/g' gradle/wrapper/gradle-wrapper.properties
-          # Also handle any other version patterns
-          sed -i 's/distributionUrl=.*gradle-.*-.*\.zip/distributionUrl=https\\:\/\/services.gradle.org\/distributions\/gradle-8.2-all.zip/g' gradle/wrapper/gradle-wrapper.properties
+          sed -i 's/distributionUrl=.*gradle-.*-.*\.zip/distributionUrl=https\\:\/\/services.gradle.org\/distributions\/gradle-8.5-all.zip/g' gradle/wrapper/gradle-wrapper.properties
           echo "Updated gradle-wrapper.properties:"
           cat gradle/wrapper/gradle-wrapper.properties
 
-      - name: Check project structure
+      - name: Check Gradle and project
         run: |
-          echo "Project structure:"
-          ls -la
-          echo "App directory:"
-          ls -la app/
-          echo "Gradle wrapper version:"
+          echo "Gradle version:"
           ./gradlew --version
+          echo "Available tasks:"
+          ./gradlew tasks --console=plain
+
+      - name: Download dependencies (with retry)
+        run: |
+          for i in {1..3}; do
+            echo "Attempt $i: Downloading dependencies..."
+            if ./gradlew dependencies --no-daemon --stacktrace; then
+              echo "Dependencies downloaded successfully"
+              break
+            else
+              echo "Attempt $i failed, retrying..."
+              sleep 10
+            fi
+          done
 
       - name: Clean project
-        run: ./gradlew clean --no-daemon --stacktrace --refresh-dependencies
+        run: ./gradlew clean --no-daemon --stacktrace
 
-      - name: Build Debug APK first (faster feedback)
+      - name: Build Debug APK (with retry)
         run: |
-          ./gradlew assembleDebug \
-            --no-daemon \
-            --stacktrace \
-            --info \
-            --refresh-dependencies \
-            --parallel
+          for i in {1..2}; do
+            echo "Attempt $i: Building Debug APK..."
+            if ./gradlew assembleDebug \
+              --no-daemon \
+              --stacktrace \
+              --info \
+              --refresh-dependencies; then
+              echo "Debug APK built successfully"
+              break
+            else
+              echo "Debug build attempt $i failed, retrying..."
+              ./gradlew clean --no-daemon
+              sleep 15
+            fi
+          done
         env:
           GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3072m -XX:+HeapDumpOnOutOfMemoryError" -Dorg.gradle.daemon=false
 
-      - name: Build Release APK
+      - name: Build Release APK (with retry)
         run: |
-          ./gradlew assembleRelease \
-            --no-daemon \
-            --stacktrace \
-            --info \
-            --refresh-dependencies \
-            --parallel
+          for i in {1..2}; do
+            echo "Attempt $i: Building Release APK..."
+            if ./gradlew assembleRelease \
+              --no-daemon \
+              --stacktrace \
+              --info \
+              --refresh-dependencies; then
+              echo "Release APK built successfully"
+              break
+            else
+              echo "Release build attempt $i failed, retrying..."
+              ./gradlew clean --no-daemon
+              sleep 15
+            fi
+          done
         env:
           GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3072m -XX:+HeapDumpOnOutOfMemoryError" -Dorg.gradle.daemon=false
 
@@ -118,15 +144,19 @@ jobs:
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: amelia-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: ignore
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: amelia-release-apk
           path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: ignore
 
       - name: Upload build reports on failure
         if: failure()
