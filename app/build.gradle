@@ -18,15 +18,6 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        python {
-            if (file("/usr/bin/python3").exists()) {
-                buildPython "/usr/bin/python3"
-            }
-            pip {
-                install "numpy"
-            }
-        }
-
         ndk {
             abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
@@ -64,6 +55,19 @@ android {
 
     composeOptions {
         kotlinCompilerExtensionVersion '1.5.4'
+    }
+}
+
+// Move Chaquopy configuration outside android block
+chaquopy {
+    defaultConfig {
+        version "3.8"
+        if (file("/usr/bin/python3").exists()) {
+            buildPython "/usr/bin/python3"
+        }
+        pip {
+            install "numpy"
+        }
     }
 }
 
