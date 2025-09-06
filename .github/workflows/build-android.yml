@@ -11,7 +11,7 @@ jobs:
   build:
     name: Build Amelia Resurrection APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
@@ -25,6 +25,9 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools: 34.0.0
 
       - name: Cache Gradle packages
         uses: actions/cache@v4
@@ -36,16 +39,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Set up Python for Chaquopy
+      - name: Set up Python 3.8 for Chaquopy
         uses: actions/setup-python@v5
         with:
           python-version: '3.8'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy
 
       - name: Create local.properties
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-      - name: Create config.json
+      - name: Create config.json with secrets
         run: |
           mkdir -p app/src/main/assets
           cat << EOF > app/src/main/assets/config.json
@@ -60,15 +68,37 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Check Gradle wrapper
+      - name: Update Gradle wrapper to 8.2
         run: |
+          # Update gradle-wrapper.properties to use Gradle 8.2
+          sed -i 's/gradle-8\.1\.1/gradle-8.2/g' gradle/wrapper/gradle-wrapper.properties
+          # Also handle any other version patterns
+          sed -i 's/distributionUrl=.*gradle-.*-.*\.zip/distributionUrl=https\\:\/\/services.gradle.org\/distributions\/gradle-8.2-all.zip/g' gradle/wrapper/gradle-wrapper.properties
+          echo "Updated gradle-wrapper.properties:"
+          cat gradle/wrapper/gradle-wrapper.properties
+
+      - name: Check project structure
+        run: |
+          echo "Project structure:"
+          ls -la
+          echo "App directory:"
+          ls -la app/
           echo "Gradle wrapper version:"
           ./gradlew --version
-          echo "Available tasks:"
-          ./gradlew tasks --console=plain
 
       - name: Clean project
-        run: ./gradlew clean --no-daemon --stacktrace
+        run: ./gradlew clean --no-daemon --stacktrace --refresh-dependencies
+
+      - name: Build Debug APK first (faster feedback)
+        run: |
+          ./gradlew assembleDebug \
+            --no-daemon \
+            --stacktrace \
+            --info \
+            --refresh-dependencies \
+            --parallel
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3072m -XX:+HeapDumpOnOutOfMemoryError" -Dorg.gradle.daemon=false
 
       - name: Build Release APK
         run: |
@@ -76,30 +106,33 @@ jobs:
             --no-daemon \
             --stacktrace \
             --info \
-            --refresh-dependencies
+            --refresh-dependencies \
+            --parallel
         env:
-          GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError"
+          GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3072m -XX:+HeapDumpOnOutOfMemoryError" -Dorg.gradle.daemon=false
 
       - name: List build outputs
         run: |
           echo "Build outputs:"
-          find . -name "*.apk" -type f
-          ls -la app/build/outputs/apk/release/ || echo "Release directory not found"
+          find . -name "*.apk" -type f -exec ls -lh {} \;
 
-      - name: Upload APK
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: amelia-resurrection-apk
-          path: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+          name: amelia-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Upload build logs on failure
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: amelia-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload build reports on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: build-logs
+          name: build-reports
           path: |
             build/reports/
             app/build/reports/
