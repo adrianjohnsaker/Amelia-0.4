@@ -11,6 +11,7 @@ jobs:
   build:
     name: Build Amelia Resurrection APK
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -59,18 +60,47 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Validate Gradle wrapper
-        uses: gradle/wrapper-validation-action@v2
+      - name: Check Gradle wrapper
+        run: |
+          echo "Gradle wrapper version:"
+          ./gradlew --version
+          echo "Available tasks:"
+          ./gradlew tasks --console=plain
 
       - name: Clean project
-        run: ./gradlew clean
+        run: ./gradlew clean --no-daemon --stacktrace
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease --stacktrace --info
+        run: |
+          ./gradlew assembleRelease \
+            --no-daemon \
+            --stacktrace \
+            --info \
+            --refresh-dependencies
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError"
+
+      - name: List build outputs
+        run: |
+          echo "Build outputs:"
+          find . -name "*.apk" -type f
+          ls -la app/build/outputs/apk/release/ || echo "Release directory not found"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: amelia-resurrection-apk
-          path: app/build/outputs/apk/release/*.apk
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            build/reports/
+            app/build/reports/
+          if-no-files-found: ignore
